@@ -11,6 +11,7 @@ import {
   Phone,
   Mail,
   MapPin,
+  Calendar,
   Clock,
   User,
   CheckCircle2,
@@ -48,6 +49,7 @@ export default function InvoiceModal({ isOpen, onClose, bookingId }: InvoiceModa
 
   // Extra Charge State
   const [chargeType, setChargeType] = useState('Custom'); // Custom, Breakfast, Lunch, Dinner, Extra Bed, Laundry
+  const [chargeDate, setChargeDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [chargeDesc, setChargeDesc] = useState('');
   const [chargeAmount, setChargeAmount] = useState('');
   const [chargeQty, setChargeQty] = useState(1);
@@ -103,6 +105,7 @@ export default function InvoiceModal({ isOpen, onClose, bookingId }: InvoiceModa
     } else {
       setInvoice(null);
       setChargeType('Custom');
+      setChargeDate(new Date().toISOString().split('T')[0]);
       setChargeDesc('');
       setChargeAmount('');
       setChargeQty(1);
@@ -142,10 +145,20 @@ export default function InvoiceModal({ isOpen, onClose, bookingId }: InvoiceModa
     if (!invoice || !chargeAmount) return;
     setAddingCharge(true);
     
+    const dateObj = new Date(chargeDate + 'T00:00:00');
+    const formattedDate = !isNaN(dateObj.getTime())
+      ? dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : chargeDate;
+
     let finalDesc = chargeDesc;
     if (chargeType !== 'Custom') {
       const rate = mealRates[chargeType] || 0;
-      finalDesc = `${chargeType} (${chargeQty} ${chargeQty === 1 ? 'unit/person' : 'units/persons'} @ ₹${rate})`;
+      const unitLabel = (chargeType === 'Breakfast' || chargeType === 'Lunch' || chargeType === 'Dinner')
+        ? (chargeQty === 1 ? 'person' : 'persons')
+        : (chargeQty === 1 ? 'unit' : 'units');
+      finalDesc = `${chargeType} on ${formattedDate} (${chargeQty} ${unitLabel} @ ₹${rate})`;
+    } else {
+      finalDesc = chargeDate ? `${chargeDesc} (${formattedDate})` : chargeDesc;
     }
 
     try {
@@ -557,39 +570,57 @@ export default function InvoiceModal({ isOpen, onClose, bookingId }: InvoiceModa
                     </div>
 
                     <form onSubmit={handleAddCharge} className="space-y-3">
-                      {chargeType === 'Custom' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-semibold text-slate-600 mb-1">Charge Description</label>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
+                            <Calendar className="w-3.5 h-3.5 mr-1 text-primary-600" />
+                            Date of Meal / Service
+                          </label>
                           <input 
-                            type="text" 
-                            value={chargeDesc}
-                            onChange={e => setChargeDesc(e.target.value)}
-                            placeholder="E.g. Extra Blanket, Temple Pooja Contribution" 
-                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                            type="date" 
+                            value={chargeDate}
+                            onChange={e => setChargeDate(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none font-medium"
                             required
                           />
                         </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-3">
+
+                        {chargeType === 'Custom' ? (
                           <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Quantity / Persons</label>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Charge Description</label>
                             <input 
-                              type="number" 
-                              min="1"
-                              value={chargeQty}
-                              onChange={e => setChargeQty(Math.max(1, parseInt(e.target.value) || 1))}
+                              type="text" 
+                              value={chargeDesc}
+                              onChange={e => setChargeDesc(e.target.value)}
+                              placeholder="E.g. Extra Blanket, Pooja Contribution" 
                               className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none"
                               required
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Unit Rate</label>
-                            <div className="px-3 py-2 text-sm border border-slate-200 bg-slate-50 rounded-lg text-slate-700 font-mono">
-                              ₹{mealRates[chargeType] || 0} / unit
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                                {(chargeType === 'Breakfast' || chargeType === 'Lunch' || chargeType === 'Dinner') ? 'Persons' : 'Quantity'}
+                              </label>
+                              <input 
+                                type="number" 
+                                min="1"
+                                value={chargeQty}
+                                onChange={e => setChargeQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none font-medium"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">Rate</label>
+                              <div className="px-3 py-2 text-sm border border-slate-200 bg-slate-50 rounded-lg text-slate-800 font-mono font-semibold">
+                                ₹{mealRates[chargeType] || 0}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       <div className="flex items-center space-x-3 pt-1">
                         <div className="relative flex-1">
