@@ -68,6 +68,11 @@ def manage_booking_invoice(booking_id):
     if not invoice:
         return jsonify({"message": "No invoice found for this booking"}), 404
         
+    # Calculate stay duration
+    nights = (booking.departure_date - booking.arrival_date).days if booking.departure_date and booking.arrival_date else 1
+    if nights <= 0:
+        nights = 1
+
     # Build payload
     data = {
         "id": invoice.id,
@@ -78,7 +83,24 @@ def manage_booking_invoice(booking_id):
         "guest_name": booking.guest.full_name,
         "issued_date": invoice.issued_date.isoformat(),
         "line_items": [{"id": li.id, "description": li.description, "amount": str(li.amount)} for li in invoice.line_items],
-        "payments": [{"id": p.id, "amount": str(p.amount), "method": p.payment_method, "date": p.payment_date.isoformat()} for p in invoice.payments]
+        "payments": [{"id": p.id, "amount": str(p.amount), "method": p.payment_method, "date": p.payment_date.isoformat()} for p in invoice.payments],
+        "booking_details": {
+            "booking_id": booking.id,
+            "guest_name": booking.guest.full_name,
+            "mobile_number": booking.guest.mobile_number,
+            "id_details": booking.guest.id_details,
+            "address": booking.guest.address,
+            "arrival_date": booking.arrival_date.isoformat() if booking.arrival_date else None,
+            "departure_date": booking.departure_date.isoformat() if booking.departure_date else None,
+            "occupant_count": booking.occupant_count,
+            "nights": nights,
+            "rooms": [{
+                "room_number": br.room.room_number,
+                "type": br.room.room_type.name if br.room.room_type else "Standard",
+                "floor": br.room.floor,
+                "rate": str(br.applied_rate)
+            } for br in booking.rooms]
+        }
     }
     
     return jsonify(data), 200
