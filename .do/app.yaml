@@ -1,0 +1,55 @@
+name: dharamshala-management
+region: blr
+databases:
+- engine: PG
+  name: dharamshala-db
+  version: "16"
+ingress:
+  rules:
+  - component:
+      name: backend
+      preserve_path_prefix: true
+    match:
+      path:
+        prefix: /api
+  - component:
+      name: backend
+      preserve_path_prefix: true
+    match:
+      path:
+        prefix: /uploads
+  - component:
+      name: frontend
+    match:
+      path:
+        prefix: /
+services:
+- name: backend
+  dockerfile_path: backend/Dockerfile
+  source_dir: backend
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: DATABASE_URL
+    scope: RUN_AND_BUILD_TIME
+    value: ${dharamshala-db.DATABASE_URL}
+  - key: SECRET_KEY
+    scope: RUN_AND_BUILD_TIME
+    value: dharamshala-management-super-secret-key-prod
+  - key: JWT_SECRET_KEY
+    scope: RUN_AND_BUILD_TIME
+    value: dharamshala-jwt-secret-key-prod
+  git:
+    branch: main
+    repo_clone_url: https://github.com/ranjanyash10/dharamshala-management.git
+static_sites:
+- name: frontend
+  source_dir: frontend
+  build_command: npm run build
+  output_dir: dist
+  index_document: index.html
+  catchall_document: index.html
+  git:
+    branch: main
+    repo_clone_url: https://github.com/ranjanyash10/dharamshala-management.git
