@@ -73,6 +73,8 @@ def manage_booking_invoice(booking_id):
     if nights <= 0:
         nights = 1
 
+    occupant_count = sum(br.occupant_count for br in booking.rooms) if booking.rooms else 1
+
     # Build payload
     data = {
         "id": invoice.id,
@@ -92,7 +94,7 @@ def manage_booking_invoice(booking_id):
             "address": booking.guest.address,
             "arrival_date": booking.arrival_date.isoformat() if booking.arrival_date else None,
             "departure_date": booking.departure_date.isoformat() if booking.departure_date else None,
-            "occupant_count": booking.occupant_count,
+            "occupant_count": occupant_count,
             "nights": nights,
             "rooms": [{
                 "room_number": br.room.room_number,
